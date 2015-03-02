@@ -555,7 +555,7 @@ void *StreamHandler(void* lp) {
     struct tm* tm_info;
     int retval;
 
-    ifname = "/dev/video0"; //TODO: make this an arg ;p
+    ifname = "/dev/video1"; //TODO: make this an arg ;p
     if(NULL == (membuf = malloc(MEMBUF_SIZE))) {
         printf("Not enough memory to allocate buffer\n");
         fprintf(stderr, "Not enough memory\n");
@@ -1490,6 +1490,43 @@ void processRemoveEvent(char *buffer, int csock, struct shared *global, struct p
     return processListEvents(buffer, csock, global,NULL);
 }
 
+
+void processIRCmdEvent(char *buffer, int csock, struct shared *global, struct post_data *post){
+    char *genfilename=NULL;
+    char *genshowid=NULL;
+    char *genid=NULL;
+
+    char *filename=NULL;
+    char *showid=NULL;
+    char *data=NULL;
+
+    char *keystring = "key";
+    char *key = getValue(keystring, post);
+
+    if(key==NULL){
+       return404(buffer,csock,"No key in IRCmdEvent request");
+       return;
+    }
+
+    int rc = -1;
+
+    if(strcmp(key,"ch_up")==0){
+        rc = system("ir_cmd_ch_up.sh");
+    }else if(strcmp(key,"ch_dw")==0){
+        rc = system("ir_cmd_ch_dw.sh");
+    }else if(strcmp(key,"pwr_on")==0){
+        rc = system("ir_cmd_pwr_on.sh");
+    }else if(strcmp(key,"pwr_off")==0){
+        rc = system("ir_cmd_pwr_off.sh");
+    }
+
+    if (rc == -1) {
+       return404(buffer,csock,"Error in executing key in IRCmdEvent request");
+       return;
+    }
+    
+}
+
 void processPostRequest(char *buffer, int csock, struct shared *global){
     struct post_data *data = getPostData(buffer);
     char *actionString = "action";
@@ -1512,6 +1549,8 @@ void processPostRequest(char *buffer, int csock, struct shared *global){
             processAddEvent(buffer,csock,global,data);
         }else if(strcmp(action,"removeevent")==0){
             processRemoveEvent(buffer,csock,global,data);
+        }else if(strcmp(action,"ircmd")==0){
+            processIRCmdEvent(buffer,csock,global,data);
         }else{
             char *text="HTTP/1.0 200 OK\nContent-Type: text/plain\n\nUnknown action requested : ";
             send(csock,text,strlen(text),0);
